@@ -1,0 +1,544 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using System.Globalization
+
+<PageTitle>운진❤️학규 캘린더</PageTitle>
+
+<main class="couple-page @(_isCompactMode ? "compact" : string.Empty) @(_isDarkMode ? "theme-dark" : "theme-light")">
+    <header class="top-header">
+        <div>
+            <h1>@(_myName + "이" + _partnerName)</h1>
+            <p>커플 캘린더</p>
+        </div>
+        @if (_showHomeLink)
+        {
+            <a href="#">Home</a>
+        }
+    </header>
+
+    <section class="hero-card">
+        <div class="hero-badges">
+            <span>@GetInitial(_myName)</span>
+            <span class="heart">❤</span>
+            <span>@GetInitial(_partnerName)</span>
+        </div>
+        <button type="button" class="setting-button" @onclick="OpenSettingsPopup">설정</button>
+        <h2>@_myName ❤ @_partnerName</h2>
+        <p>우리의 소중한 순간들을 함께 기록하고 공유해보세요.</p>
+
+        <div class="chips-row">
+            <span>사귄지 <strong>D+@RelationshipDays</strong></span>
+            <span>오늘 <strong>@DateTime.Today.ToString("MM-dd")</strong></span>
+        </div>
+
+        <div class="stats-row">
+            <button type="button" class="stat-button" @onclick="() => OpenListPopup(CalendarType.Schedule)">🗓️ 다가오는 일정 <strong>@UpcomingScheduleCount</strong></button>
+            <button type="button" class="stat-button" @onclick="() => OpenListPopup(CalendarType.Memo)">📝 메모 <strong>@_items.Count(x => x.Type == CalendarType.Memo)</strong></button>
+            <button type="button" class="stat-button" @onclick="() => OpenListPopup(CalendarType.Anniversary)">💕 기념일 <strong>@_items.Count(x => x.Type == CalendarType.Anniversary)</strong></button>
+        </div>
+    </section>
+
+    <section class="calendar-card">
+        <div class="calendar-title-row">
+            <h2>🗓️ 이번 달 캘린더</h2>
+            <div class="mode-tabs">
+                <button type="button" class="@GetTabClass(CalendarType.Memo)" @onclick="() => SetType(CalendarType.Memo)">메모</button>
+                <button type="button" class="@GetTabClass(CalendarType.Anniversary)" @onclick="() => SetType(CalendarType.Anniversary)">기념일</button>
+                <button type="button" class="@GetTabClass(CalendarType.Schedule)" @onclick="() => SetType(CalendarType.Schedule)">일정</button>
+            </div>
+        </div>
+
+        <p class="calendar-subtitle">원하는 구분을 선택하고 날짜를 눌러 바로 등록하세요.</p>
+
+        <div class="month-nav">
+            <button type="button" @onclick="MovePrevMonth">◀ 이전 달</button>
+            <strong>@CurrentMonthTitle</strong>
+            <div>
+                <button type="button" @onclick="MoveNextMonth">다음 달 ▶</button>
+                <button type="button" class="today-button" @onclick="MoveToday">오늘</button>
+            </div>
+        </div>
+
+        <div class="calendar-grid" role="grid">
+            @for (var i = 0; i < WeekDays.Length; i++)
+            {
+                <span class="weekday @GetWeekdayClass(i)">@WeekDays[i]</span>
+            }
+
+            @foreach (var day in Days)
+            {
+                var dayItems = GetItemsForDay(day.Date);
+                <button type="button"
+                        class="day-cell @(day.IsCurrentMonth ? "" : "other") @(day.IsToday ? "today" : "") @(IsSelected(day.Date) ? "selected" : "")"
+                        @onpointerdown="() => StartPress(day.Date)"
+                        @onpointerup="() => EndPress(day.Date)"
+                        @onpointercancel="CancelPress"
+                        @onpointerleave="CancelPress">
+                    <span class="day-number @GetDayNumberClass(day.Date)">@day.Date.Day</span>
+                    @foreach (var item in dayItems.Take(2))
+                    {
+                        <span class="day-item @GetDayItemClass(item)">@item.Content</span>
+                    }
+                    @if (dayItems.Count > 2)
+                    {
+                        <span class="day-item more">+@(dayItems.Count - 2)</span>
+                    }
+                </button>
+            }
+        </div>
+    </section>
+
+    @if (_isPopupOpen)
+    {
+        <div class="memo-popup-backdrop" @onclick="ClosePopup">
+            <section class="memo-popup" @onclick:stopPropagation>
+                <h3>@GetTypeLabel(_selectedType) 등록</h3>
+
+                <label>
+                    날짜
+                    <input type="text" value="@_selectedDate.ToString("yyyy-MM-dd")" readonly />
+                </label>
+
+                <label>
+                    내용
+                    <textarea @bind="_popupContent" rows="4" maxlength="100" placeholder="내용을 입력하세요"></textarea>
+                </label>
+
+                <div class="popup-actions">
+                    <button type="button" class="ghost" @onclick="ClosePopup">취소</button>
+                    <button type="button" class="primary" @onclick="SavePopupItem">등록</button>
+                </div>
+            </section>
+        </div>
+    }
+
+    @if (_isListPopupOpen)
+    {
+        <div class="memo-popup-backdrop" @onclick="CloseListPopup">
+            <section class="memo-popup list-popup" @onclick:stopPropagation>
+                <h3>@GetListTitle()</h3>
+
+                @if (GetListItems().Count == 0)
+                {
+                    <p class="empty-list">등록된 항목이 없어요.</p>
+                }
+                else
+                {
+                    <ul class="detail-list">
+                        @foreach (var item in GetListItems())
+                        {
+                            <li>
+                                <span>@item.Date.ToString("yyyy-MM-dd")</span>
+                                <strong>@item.Content</strong>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="popup-actions">
+                    <button type="button" class="primary" @onclick="CloseListPopup">닫기</button>
+                </div>
+            </section>
+        </div>
+    }
+
+    @if (_isSettingsPopupOpen)
+    {
+        <div class="memo-popup-backdrop" @onclick="CloseSettingsPopup">
+            <section class="memo-popup settings-popup" @onclick:stopPropagation>
+                <h3>설정</h3>
+
+                <label>
+                    내 이름
+                    <input type="text" @bind="_draftMyName" maxlength="12" />
+                </label>
+
+                <label>
+                    상대 이름
+                    <input type="text" @bind="_draftPartnerName" maxlength="12" />
+                </label>
+
+                <label>
+                    사귄 날짜
+                    <input type="date" @bind="_draftRelationshipStartDate" @bind:format="yyyy-MM-dd" />
+                </label>
+
+                <label class="setting-check">
+                    <input type="checkbox" @bind="_draftShowHomeLink" /> Home 링크 표시
+                </label>
+
+                <label class="setting-check">
+                    <input type="checkbox" @bind="_draftCompactMode" /> 캘린더 컴팩트 모드
+                </label>
+
+                <label class="setting-check">
+                    <input type="checkbox" @bind="_draftIsDarkMode" /> 다크 모드
+                </label>
+
+                <div class="popup-actions">
+                    <button type="button" class="ghost" @onclick="CloseSettingsPopup">취소</button>
+                    <button type="button" class="primary" @onclick="SaveSettings">저장</button>
+                </div>
+            </section>
+        </div>
+    }
+
+    @if (_isDayItemsPopupOpen)
+    {
+        <div class="memo-popup-backdrop" @onclick="CloseDayItemsPopup">
+            <section class="memo-popup day-items-popup" @onclick:stopPropagation>
+                <h3>@_dayItemsDate.ToString("yyyy-MM-dd") 항목 관리</h3>
+
+                @if (GetItemsForSelectedDate().Count == 0)
+                {
+                    <p class="empty-list">해당 날짜에 등록된 항목이 없어요.</p>
+                }
+                else
+                {
+                    <ul class="detail-list">
+                        @foreach (var item in GetItemsForSelectedDate())
+                        {
+                            <li>
+                                @if (_editingItemId == item.Id)
+                                {
+                                    <div class="edit-form">
+                                        <select @bind="_editingType">
+                                            <option value="@CalendarType.Memo">메모</option>
+                                            <option value="@CalendarType.Anniversary">기념일</option>
+                                            <option value="@CalendarType.Schedule">일정</option>
+                                        </select>
+                                        <input type="text" @bind="_editingText" maxlength="100" />
+                                        <div class="item-actions">
+                                            <button type="button" class="save" @onclick="SaveEditingItem">저장</button>
+                                            <button type="button" class="ghost" @onclick="CancelEditingItem">취소</button>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>@GetTypeLabel(item.Type) · @item.Date.ToString("yyyy-MM-dd")</span>
+                                    <strong>@item.Content</strong>
+                                    <div class="item-actions">
+                                        <button type="button" class="ghost" @onclick="() => StartEditingItem(item)">수정</button>
+                                        <button type="button" class="danger" @onclick="() => DeleteItem(item.Id)">삭제</button>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="popup-actions">
+                    <button type="button" class="primary" @onclick="CloseDayItemsPopup">닫기</button>
+                </div>
+            </section>
+        </div>
+    }
+</main>
+
+@code {
+    private static readonly string[] WeekDays = ["일", "월", "화", "수", "목", "금", "토"];
+    private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime _selectedDate = DateTime.Today;
+    private DateTime _relationshipStartDate = new(2024, 7, 14);
+    private readonly List<CalendarItem> _items = [];
+    private string _myName = "운진";
+    private string _partnerName = "학규";
+    private bool _showHomeLink = true;
+    private bool _isCompactMode;
+    private bool _isDarkMode = true;
+    private CalendarType _selectedType = CalendarType.Memo;
+    private bool _isPopupOpen;
+    private string _popupContent = string.Empty;
+    private bool _isListPopupOpen;
+    private CalendarType _listPopupType;
+    private bool _isSettingsPopupOpen;
+    private bool _isDayItemsPopupOpen;
+    private DateTime _dayItemsDate;
+    private int? _editingItemId;
+    private string _editingText = string.Empty;
+    private CalendarType _editingType;
+    private CancellationTokenSource? _pressCts;
+    private bool _longPressTriggered;
+
+    private string _draftMyName = string.Empty;
+    private string _draftPartnerName = string.Empty;
+    private DateTime _draftRelationshipStartDate;
+    private bool _draftShowHomeLink;
+    private bool _draftCompactMode;
+    private bool _draftIsDarkMode;
+
+    private int UpcomingScheduleCount => _items.Count(x => x.Type == CalendarType.Schedule && x.Date.Date >= DateTime.Today);
+    private int RelationshipDays => (DateTime.Today.Date - _relationshipStartDate.Date).Days + 1;
+
+    private string CurrentMonthTitle => _currentMonth.ToString("yyyy년 MM월", CultureInfo.GetCultureInfo("ko-KR"));
+
+    private List<CalendarCell> Days
+    {
+        get
+        {
+            var start = _currentMonth.AddDays(-(int)_currentMonth.DayOfWeek);
+            return Enumerable.Range(0, 42)
+                .Select(index =>
+                {
+                    var date = start.AddDays(index);
+                    return new CalendarCell(date, date.Month == _currentMonth.Month, date.Date == DateTime.Today);
+                })
+                .ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _items.AddRange(
+        [
+            new CalendarItem(1, DateTime.Today, CalendarType.Memo, "장보기"),
+            new CalendarItem(2, DateTime.Today.AddDays(2), CalendarType.Schedule, "영화 보기"),
+            new CalendarItem(3, DateTime.Today.AddDays(6), CalendarType.Anniversary, "만난 날")
+        ]);
+
+        _draftRelationshipStartDate = _relationshipStartDate;
+    }
+
+    private void MovePrevMonth() => _currentMonth = _currentMonth.AddMonths(-1);
+    private void MoveNextMonth() => _currentMonth = _currentMonth.AddMonths(1);
+
+    private void MoveToday()
+    {
+        _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        _selectedDate = DateTime.Today;
+    }
+
+    private void SelectDay(DateTime date)
+    {
+        _selectedDate = date;
+        _popupContent = string.Empty;
+        _isPopupOpen = true;
+    }
+
+    private void StartPress(DateTime date)
+    {
+        CancelPress();
+        _longPressTriggered = false;
+        _pressCts = new CancellationTokenSource();
+        _ = DetectLongPressAsync(date, _pressCts.Token);
+    }
+
+    private void EndPress(DateTime date)
+    {
+        _pressCts?.Cancel();
+        _pressCts?.Dispose();
+        _pressCts = null;
+
+        if (!_longPressTriggered)
+        {
+            SelectDay(date);
+        }
+    }
+
+    private void CancelPress()
+    {
+        _pressCts?.Cancel();
+        _pressCts?.Dispose();
+        _pressCts = null;
+    }
+
+    private async Task DetectLongPressAsync(DateTime date, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(500, cancellationToken);
+            _longPressTriggered = true;
+            _dayItemsDate = date;
+            _isDayItemsPopupOpen = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private void ClosePopup()
+    {
+        _isPopupOpen = false;
+        _popupContent = string.Empty;
+    }
+
+    private void OpenListPopup(CalendarType type)
+    {
+        _listPopupType = type;
+        _isListPopupOpen = true;
+    }
+
+    private void CloseListPopup() => _isListPopupOpen = false;
+
+    private void OpenSettingsPopup()
+    {
+        _draftMyName = _myName;
+        _draftPartnerName = _partnerName;
+        _draftRelationshipStartDate = _relationshipStartDate;
+        _draftShowHomeLink = _showHomeLink;
+        _draftCompactMode = _isCompactMode;
+        _draftIsDarkMode = _isDarkMode;
+        _isSettingsPopupOpen = true;
+    }
+
+    private void CloseSettingsPopup() => _isSettingsPopupOpen = false;
+
+    private void CloseDayItemsPopup()
+    {
+        _isDayItemsPopupOpen = false;
+        _editingItemId = null;
+        _editingText = string.Empty;
+    }
+
+    private void SaveSettings()
+    {
+        if (!string.IsNullOrWhiteSpace(_draftMyName))
+        {
+            _myName = _draftMyName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(_draftPartnerName))
+        {
+            _partnerName = _draftPartnerName.Trim();
+        }
+
+        _relationshipStartDate = _draftRelationshipStartDate;
+        _showHomeLink = _draftShowHomeLink;
+        _isCompactMode = _draftCompactMode;
+        _isDarkMode = _draftIsDarkMode;
+        _isSettingsPopupOpen = false;
+    }
+
+    private bool IsSelected(DateTime date) => _selectedDate.Date == date.Date;
+    private string GetTabClass(CalendarType type) => _selectedType == type ? "active" : string.Empty;
+
+    private void SetType(CalendarType type)
+    {
+        _selectedType = type;
+    }
+
+    private static string GetInitial(string name) => string.IsNullOrWhiteSpace(name) ? "?" : name[..1];
+    private static string GetWeekdayClass(int index) => index switch
+    {
+        0 => "sun",
+        6 => "sat",
+        _ => string.Empty
+    };
+
+    private static string GetDayNumberClass(DateTime date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Sunday => "sun",
+        DayOfWeek.Saturday => "sat",
+        _ => string.Empty
+    };
+
+    private List<CalendarItem> GetItemsForDay(DateTime date) =>
+        _items.Where(x => x.Type == _selectedType && x.Date.Date == date.Date).ToList();
+
+    private static string GetDayItemClass(CalendarItem item) => item.Type switch
+    {
+        CalendarType.Schedule => "schedule",
+        CalendarType.Anniversary => "anniversary",
+        _ => "memo"
+    };
+
+    private string GetTypeLabel(CalendarType type) => type switch
+    {
+        CalendarType.Memo => "메모",
+        CalendarType.Anniversary => "기념일",
+        _ => "일정"
+    };
+
+    private string GetListTitle() => _listPopupType switch
+    {
+        CalendarType.Schedule => "다가오는 일정",
+        CalendarType.Memo => "메모 목록",
+        _ => "기념일 목록"
+    };
+
+    private List<CalendarItem> GetListItems()
+    {
+        var query = _items.Where(x => x.Type == _listPopupType);
+
+        if (_listPopupType == CalendarType.Schedule)
+        {
+            query = query.Where(x => x.Date.Date >= DateTime.Today);
+        }
+
+        return query.OrderBy(x => x.Date).ToList();
+    }
+
+    private List<CalendarItem> GetItemsForSelectedDate() =>
+        _items.Where(x => x.Date.Date == _dayItemsDate.Date)
+              .OrderBy(x => x.Type)
+              .ToList();
+
+    private void StartEditingItem(CalendarItem item)
+    {
+        _editingItemId = item.Id;
+        _editingText = item.Content;
+        _editingType = item.Type;
+    }
+
+    private void CancelEditingItem()
+    {
+        _editingItemId = null;
+        _editingText = string.Empty;
+    }
+
+    private void SaveEditingItem()
+    {
+        if (_editingItemId is null || string.IsNullOrWhiteSpace(_editingText))
+        {
+            return;
+        }
+
+        var index = _items.FindIndex(x => x.Id == _editingItemId.Value);
+        if (index >= 0)
+        {
+            var target = _items[index];
+            _items[index] = target with { Content = _editingText.Trim(), Type = _editingType };
+        }
+
+        CancelEditingItem();
+    }
+
+    private void DeleteItem(int id)
+    {
+        var target = _items.FirstOrDefault(x => x.Id == id);
+        if (target is not null)
+        {
+            _items.Remove(target);
+        }
+
+        if (_editingItemId == id)
+        {
+            CancelEditingItem();
+        }
+    }
+
+    private void SavePopupItem()
+    {
+        if (string.IsNullOrWhiteSpace(_popupContent))
+        {
+            return;
+        }
+
+        var newId = _items.Count == 0 ? 1 : _items.Max(x => x.Id) + 1;
+        _items.Add(new CalendarItem(newId, _selectedDate, _selectedType, _popupContent.Trim()));
+        ClosePopup();
+    }
+
+    private sealed record CalendarCell(DateTime Date, bool IsCurrentMonth, bool IsToday);
+    private sealed record CalendarItem(int Id, DateTime Date, CalendarType Type, string Content);
+
+    private enum CalendarType
+    {
+        Memo,
+        Anniversary,
+        Schedule
+    }
+}
