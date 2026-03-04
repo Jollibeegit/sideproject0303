@@ -8,7 +8,7 @@
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject NavigationManager Nav
 
-<PageTitle>@(_myName)❤️@(_partnerName) 캘린더</PageTitle>
+<PageTitle>@(_myName)@(_partnerName) 우리끼리 쓰는 메모</PageTitle>
 
 @if (!string.IsNullOrWhiteSpace(_dbError))
 {
@@ -33,11 +33,6 @@
     </header>
 
     <section class="hero-card">
-        <div class="hero-badges">
-            <span>@GetInitial(_myName)</span>
-            <span class="heart">❤</span>
-            <span>@GetInitial(_partnerName)</span>
-        </div>
         <button type="button" class="setting-button" @onclick="OpenSettingsPopup">설정</button>
         <h2><span class="@GetNameHighlight(_myName)">@_myName</span> ❤ <span class="@GetNameHighlight(_partnerName)">@_partnerName</span></h2>
         <p>우리의 소중한 순간들을 함께 기록하고 공유해보세요.</p>
