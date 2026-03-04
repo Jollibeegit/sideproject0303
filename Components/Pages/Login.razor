@@ -25,9 +25,25 @@
             <div class="profile-row">
                 @foreach (var user in _users)
                 {
-                    <button type="button" class="profile-card" @onclick="() => Enter(user)">
-                        <span class="profile-avatar">@user.DisplayName</span>
-                    </button>
+                    <div class="profile-card-wrap">
+                        <button type="button" class="profile-card" @onclick="() => Enter(user)">
+                            <div class="profile-photo-area">
+                                @if (!string.IsNullOrWhiteSpace(user.ProfileImageUrl))
+                                {
+                                    <img class="profile-photo" src="@user.ProfileImageUrl" alt="@user.DisplayName" />
+                                }
+                                else
+                                {
+                                    <span class="profile-photo-empty">📷</span>
+                                }
+                                <label class="photo-upload-btn" @onclick:stopPropagation>
+                                    ✏️
+                                    <InputFile OnChange="e => OnFileSelected(e, user.Id)" accept="image/*" style="display:none" />
+                                </label>
+                            </div>
+                            <span class="profile-avatar">@user.DisplayName</span>
+                        </button>
+                    </div>
                 }
             </div>
         }
@@ -56,5 +72,44 @@
     private void Enter(User user)
     {
         Nav.NavigateTo($"/{user.Id}");
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e, long userId)
+    {
+        try
+        {
+            var file = e.File;
+            if (file.Size > 10 * 1024 * 1024)
+            {
+                _error = "이미지는 10MB 이하만 가능합니다.";
+                return;
+            }
+
+            var resized = await file.RequestImageFileAsync("image/jpeg", 400, 400);
+            using var ms = new MemoryStream();
+            await resized.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            var dataUrl = $"data:image/jpeg;base64,{base64}";
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user is not null)
+            {
+                user.ProfileImageUrl = dataUrl;
+                await db.SaveChangesAsync();
+
+                var local = _users.FirstOrDefault(u => u.Id == userId);
+                if (local is not null)
+                {
+                    _users[_users.IndexOf(local)] = await db.Users.AsNoTracking().FirstAsync(u => u.Id == userId);
+                }
+            }
+
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = $"이미지 업로드 실패: {ex.Message}";
+        }
     }
 }

@@ -1,0 +1,25 @@
+{
+  "short_name": "커플캘린더",
+  "name": "커플 캘린더",
+  "description": "우리끼리 쓰는 커플 캘린더",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d1a",
+  "theme_color": "#070d1a",
+  "orientation": "portrait",
+  "scope": "/"
+}

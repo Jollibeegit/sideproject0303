@@ -47,7 +47,10 @@ try
     {
         var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var db = await dbFactory.CreateDbContextAsync();
-        
+
+        // 자동 마이그레이션 적용
+        await db.Database.MigrateAsync();
+
         if (!await db.Couples.AnyAsync(c => c.Code == "ABCD1234"))
         {
             var couple = new Couple

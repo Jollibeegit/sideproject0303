@@ -15,5 +15,7 @@ public class User
     [MaxLength(120)]
     public string Email { get; set; } = ""; // 지금은 선택. 로그인 붙일 때 활용
 
+    public string? ProfileImageUrl { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

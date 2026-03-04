@@ -55,9 +55,14 @@
     justify-content: center;
 }
 
-.profile-card {
+.profile-card-wrap {
     flex: 1;
     max-width: 220px;
+    position: relative;
+}
+
+.profile-card {
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -68,6 +73,7 @@
     color: #eaf0ff;
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    gap: clamp(0.8rem, 3vw, 1.4rem);
 }
 
 .profile-card:hover {
@@ -80,6 +86,57 @@
     transform: scale(0.97);
 }
 
+/* ── 상단 사진 영역 ── */
+.profile-photo-area {
+    align-self: stretch;
+    position: relative;
+}
+
+.profile-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 2px solid rgba(111, 77, 255, 0.4);
+    box-shadow: 0 4px 16px rgba(111, 77, 255, 0.25);
+}
+
+.profile-photo-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    font-size: 1.8rem;
+}
+
+.photo-upload-btn {
+    position: absolute;
+    bottom: 0.4rem;
+    right: 0.4rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(111, 77, 255, 0.9);
+    border: 2px solid rgba(12, 21, 38, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    z-index: 2;
+}
+
+.photo-upload-btn:hover {
+    background: rgba(111, 77, 255, 1);
+    transform: scale(1.15);
+}
+
+/* ── 이름 원형 ── */
 .profile-avatar {
     width: clamp(5.5rem, 16vw, 7.5rem);
     height: clamp(5.5rem, 16vw, 7.5rem);
@@ -100,8 +157,11 @@
         padding: 3.5rem 3rem;
     }
 
-    .profile-card {
+    .profile-card-wrap {
         max-width: 240px;
+    }
+
+    .profile-card {
         padding: 2.4rem 1.6rem;
     }
 
@@ -138,9 +198,12 @@
         justify-content: center;
     }
 
-    .profile-card {
+    .profile-card-wrap {
         max-width: none;
         flex: 1;
+    }
+
+    .profile-card {
         padding: 3.7rem 1rem;
         min-height: 52.5dvh;
         justify-content: center;
