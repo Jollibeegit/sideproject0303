@@ -8,6 +8,9 @@
         "hero"
         "calendar";
     gap: 0.9rem;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .couple-page.theme-light {
@@ -251,6 +254,90 @@
 .mode-tabs {
     display: flex;
     gap: 0.35rem;
+    align-items: center;
+}
+
+.toggle-switch {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.toggle-track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 5rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: #1b2334;
+    border: 1px solid #515e77;
+    transition: background 0.25s, border-color 0.25s;
+    padding: 0 0.4rem;
+}
+
+.toggle-track.on {
+    background: linear-gradient(120deg, #6f4dff, #8d66ff);
+    border-color: transparent;
+    box-shadow: 0 0 14px rgba(132, 100, 255, 0.4);
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    background: #eaf0ff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-track.on .toggle-thumb {
+    transform: translateX(2.85rem);
+    background: #fff;
+}
+
+.toggle-label {
+    position: absolute;
+    right: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+    z-index: 1;
+    transition: left 0.25s, right 0.25s, color 0.25s;
+}
+
+.toggle-track.on .toggle-label {
+    right: auto;
+    left: 0.45rem;
+    color: #fff;
+}
+
+.couple-page.theme-light .toggle-track {
+    background: #e2e8f4;
+    border-color: #b3c4e2;
+}
+
+.couple-page.theme-light .toggle-track.on {
+    background: linear-gradient(120deg, #6f4dff, #8d66ff);
+    border-color: transparent;
+}
+
+.couple-page.theme-light .toggle-thumb {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.couple-page.theme-light .toggle-label {
+    color: #5e6f8e;
+}
+
+.couple-page.theme-light .toggle-track.on .toggle-label {
+    color: #fff;
 }
 
 .mode-tabs button {
@@ -343,8 +430,44 @@
     font-weight: 600;
     display: flex;
     flex-direction: column;
-    gap: 0.12rem;
+    gap: 0.08rem;
     overflow: hidden;
+    position: relative;
+}
+
+.day-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.event-dots {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.dot-memo {
+    background: #ffe85c;
+    box-shadow: 0 0 4px rgba(255, 232, 92, 0.6);
+}
+
+.dot-anniversary {
+    background: #ff8fbf;
+    box-shadow: 0 0 4px rgba(255, 143, 191, 0.6);
+}
+
+.dot-schedule {
+    background: #8fef6a;
+    box-shadow: 0 0 4px rgba(143, 239, 106, 0.6);
 }
 
 .day-number {
@@ -361,19 +484,18 @@
 }
 
 .day-item {
-    border-radius: 6px;
+    border-radius: 4px;
     background: linear-gradient(90deg, rgba(255, 242, 124, 0.8), rgba(255, 229, 92, 0.75));
-    padding: 0.06rem 0.2rem;
-    font-size: 0.64rem;
-    line-height: 1.2;
+    padding: 0.08rem 0.2rem;
+    font-size: 0.72rem;
+    line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
+    display: block;
     text-align: left;
     color: #1f2230;
+    font-weight: 700;
 }
 
 .day-item.schedule {
@@ -434,6 +556,72 @@
 .memo-popup h3 {
     margin: 0 0 0.7rem;
     font-size: 1rem;
+}
+
+.popup-type-tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.popup-tab {
+    flex: 1;
+    padding: 0.45rem 0;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    border: 1.5px solid #3a4d6e;
+    background: transparent;
+    color: #9cb0d5;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.popup-tab.active {
+    color: #fff;
+    border-color: transparent;
+}
+
+.popup-tab.memo.active {
+    background: linear-gradient(90deg, rgba(255, 232, 92, 0.85), rgba(255, 210, 60, 0.8));
+    color: #2a2200;
+    box-shadow: 0 0 12px rgba(255, 232, 92, 0.35);
+}
+
+.popup-tab.anniversary.active {
+    background: linear-gradient(90deg, rgba(255, 143, 191, 0.85), rgba(255, 120, 170, 0.8));
+    color: #3a0020;
+    box-shadow: 0 0 12px rgba(255, 143, 191, 0.35);
+}
+
+.popup-tab.schedule.active {
+    background: linear-gradient(90deg, rgba(143, 239, 106, 0.85), rgba(120, 220, 85, 0.8));
+    color: #0a2a00;
+    box-shadow: 0 0 12px rgba(143, 239, 106, 0.35);
+}
+
+.couple-page.theme-light .popup-tab {
+    border-color: #b3c4e2;
+    color: #5e6f8e;
+    background: #f3f7ff;
+}
+
+.couple-page.theme-light .popup-tab.memo.active {
+    background: linear-gradient(90deg, #ffe85c, #ffd23c);
+    color: #2a2200;
+    border-color: transparent;
+}
+
+.couple-page.theme-light .popup-tab.anniversary.active {
+    background: linear-gradient(90deg, #ff8fbf, #ff78aa);
+    color: #3a0020;
+    border-color: transparent;
+}
+
+.couple-page.theme-light .popup-tab.schedule.active {
+    background: linear-gradient(90deg, #8fef6a, #78dc55);
+    color: #0a2a00;
+    border-color: transparent;
 }
 
 .memo-popup label {
@@ -616,14 +804,165 @@
     font-size: 0.88rem;
 }
 
-@media (max-width: 479px) {
+@media (max-width: 699px) {
+    .couple-page {
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow: hidden;
+        grid-template-rows: auto auto 1fr;
+        gap: 0.4rem;
+        padding: 0.5rem;
+    }
+
+    .top-header h1 {
+        font-size: 0.95rem;
+    }
+
+    .top-header p {
+        font-size: 0.7rem;
+    }
+
+    .hero-card,
+    .calendar-card {
+        padding: 0.55rem;
+        border-radius: 14px;
+    }
+
+    .hero-card h2 {
+        font-size: 1.3rem;
+    }
+
+    .hero-card p {
+        font-size: 0.75rem;
+        margin: 0.15rem 0 0;
+    }
+
+    .hero-badges {
+        margin-bottom: 0.2rem;
+    }
+
+    .hero-badges span {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.7rem;
+    }
+
+    .chips-row,
+    .stats-row {
+        margin-top: 0.35rem;
+        gap: 0.3rem;
+    }
+
+    .chips-row span,
+    .stat-button {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .setting-button {
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.28rem 0.55rem;
+        font-size: 0.75rem;
+    }
+
+    .calendar-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
     .calendar-title-row {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .calendar-title-row h2 {
+        font-size: 1.05rem;
+    }
+
+    .calendar-subtitle {
+        margin: 0.15rem 0 0.3rem;
+        font-size: 0.75rem;
     }
 
     .month-nav {
         flex-wrap: wrap;
+        margin-bottom: 0.3rem;
+    }
+
+    .month-nav button {
+        padding: 0.18rem 0.4rem;
+        font-size: 0.7rem;
+    }
+
+    .month-nav strong {
+        font-size: 0.82rem;
+    }
+
+    .mode-tabs button {
+        padding: 0.25rem 0.45rem;
+        font-size: 0.72rem;
+    }
+
+    .toggle-track {
+        width: 4.2rem;
+        height: 1.7rem;
+        padding: 0 0.3rem;
+    }
+
+    .toggle-thumb {
+        width: 1.3rem;
+        height: 1.3rem;
+    }
+
+    .toggle-track.on .toggle-thumb {
+        transform: translateX(2.35rem);
+    }
+
+    .toggle-label {
+        font-size: 0.68rem;
+        right: 0.35rem;
+    }
+
+    .toggle-track.on .toggle-label {
+        left: 0.35rem;
+    }
+
+    .calendar-grid {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .weekday {
+        font-size: 0.78rem;
+        min-height: 1.4rem;
+    }
+
+    .day-cell {
+        min-height: 0;
+        padding: 0.1rem;
+    }
+
+    .day-number {
+        font-size: 1rem;
+    }
+
+    .day-item {
+        font-size: 0.58rem;
+        padding: 0.02rem 0.1rem;
+    }
+
+    .dot {
+        width: 5px;
+        height: 5px;
+    }
+
+    .event-dots {
+        gap: 1px;
+        padding-top: 1px;
     }
 }
 

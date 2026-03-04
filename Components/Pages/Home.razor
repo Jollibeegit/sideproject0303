@@ -55,6 +55,12 @@
         <div class="calendar-title-row">
             <h2>🗓️ 이번 달 캘린더</h2>
             <div class="mode-tabs">
+                <label class="toggle-switch" @onclick="ToggleShowAll" @onclick:preventDefault>
+                    <span class="toggle-track @(_showAll ? "on" : "")">
+                        <span class="toggle-label">전체</span>
+                        <span class="toggle-thumb"></span>
+                    </span>
+                </label>
                 <button type="button" class="@GetTabClass(CalendarType.Memo)" @onclick="() => SetType(CalendarType.Memo)">메모</button>
                 <button type="button" class="@GetTabClass(CalendarType.Anniversary)" @onclick="() => SetType(CalendarType.Anniversary)">기념일</button>
                 <button type="button" class="@GetTabClass(CalendarType.Schedule)" @onclick="() => SetType(CalendarType.Schedule)">일정</button>
@@ -81,20 +87,40 @@
             @foreach (var day in Days)
             {
                 var dayItems = GetItemsForDay(day.Date);
+                var eventTypes = GetEventTypesForDay(day.Date);
                 <button type="button"
                         class="day-cell @(day.IsCurrentMonth ? "" : "other") @(day.IsToday ? "today" : "") @(IsSelected(day.Date) ? "selected" : "")"
                         @onpointerdown="() => StartPress(day.Date)"
                         @onpointerup="() => EndPress(day.Date)"
                         @onpointercancel="CancelPress"
                         @onpointerleave="CancelPress">
-                    <span class="day-number @GetDayNumberClass(day.Date)">@day.Date.Day</span>
-                    @foreach (var item in dayItems.Take(2))
+                    <div class="day-top">
+                        <span class="day-number @GetDayNumberClass(day.Date)">@day.Date.Day</span>
+                        @if (eventTypes.Count > 0)
+                        {
+                            <span class="event-dots">
+                                @if (eventTypes.Contains(CalendarType.Memo))
+                                {
+                                    <span class="dot dot-memo"></span>
+                                }
+                                @if (eventTypes.Contains(CalendarType.Anniversary))
+                                {
+                                    <span class="dot dot-anniversary"></span>
+                                }
+                                @if (eventTypes.Contains(CalendarType.Schedule))
+                                {
+                                    <span class="dot dot-schedule"></span>
+                                }
+                            </span>
+                        }
+                    </div>
+                    @if (dayItems.Count > 0)
                     {
-                        <span class="day-item @GetDayItemClass(item)">@GetDisplayLabel(item)</span>
+                        <span class="day-item @GetDayItemClass(dayItems[0])">@dayItems[0].Content</span>
                     }
-                    @if (dayItems.Count > 2)
+                    @if (dayItems.Count > 1)
                     {
-                        <span class="day-item more">+@(dayItems.Count - 2)</span>
+                        <span class="day-item more">+@(dayItems.Count - 1)</span>
                     }
                 </button>
             }
@@ -105,7 +131,13 @@
     {
         <div class="memo-popup-backdrop" @onclick="ClosePopup">
             <section class="memo-popup" @onclick:stopPropagation>
-                <h3>@GetTypeLabel(_selectedType) 등록</h3>
+                <h3>@GetTypeLabel(_popupType) 등록</h3>
+
+                <div class="popup-type-tabs">
+                    <button type="button" class="popup-tab memo @(_popupType == CalendarType.Memo ? "active" : "")" @onclick="() => _popupType = CalendarType.Memo">메모</button>
+                    <button type="button" class="popup-tab anniversary @(_popupType == CalendarType.Anniversary ? "active" : "")" @onclick="() => _popupType = CalendarType.Anniversary">기념일</button>
+                    <button type="button" class="popup-tab schedule @(_popupType == CalendarType.Schedule ? "active" : "")" @onclick="() => _popupType = CalendarType.Schedule">일정</button>
+                </div>
 
                 <label>
                     시작일
@@ -277,7 +309,9 @@
     private bool _isCompactMode;
     private bool _isDarkMode = true;
     private CalendarType _selectedType = CalendarType.Memo;
+    private bool _showAll = true;
     private bool _isPopupOpen;
+    private CalendarType _popupType = CalendarType.Memo;
     private string _popupTitle = string.Empty;
     private string _popupContent = string.Empty;
     private DateOnly _popupStartDate;
@@ -415,6 +449,7 @@
         _popupEndDate = DateOnly.FromDateTime(date);
         _popupTitle = string.Empty;
         _popupContent = string.Empty;
+        _popupType = _showAll ? CalendarType.Memo : _selectedType;
         _isPopupOpen = true;
     }
 
@@ -534,11 +569,17 @@
     }
 
     private bool IsSelected(DateTime date) => _selectedDate.Date == date.Date;
-    private string GetTabClass(CalendarType type) => _selectedType == type ? "active" : string.Empty;
+    private string GetTabClass(CalendarType type) => !_showAll && _selectedType == type ? "active" : string.Empty;
 
     private void SetType(CalendarType type)
     {
+        _showAll = false;
         _selectedType = type;
+    }
+
+    private void ToggleShowAll()
+    {
+        _showAll = !_showAll;
     }
 
     private static string GetInitial(string name) => string.IsNullOrWhiteSpace(name) ? "?" : name[..1];
@@ -557,7 +598,12 @@
     };
 
     private List<CalendarItem> GetItemsForDay(DateTime date) =>
-        _items.Where(x => x.Type == _selectedType && x.Date.Date == date.Date).ToList();
+        _items.Where(x => (_showAll || x.Type == _selectedType) && x.Date.Date == date.Date).ToList();
+
+    private HashSet<CalendarType> GetEventTypesForDay(DateTime date) =>
+        _items.Where(x => x.Date.Date == date.Date)
+              .Select(x => x.Type)
+              .ToHashSet();
 
     private static string GetDayItemClass(CalendarItem item) => item.Type switch
     {
@@ -673,7 +719,7 @@
             db.CalendarEvents.Add(new CalendarEvent
             {
                 CoupleId = couple.Id,
-                Type = (CalendarEventType)(int)_selectedType,
+                Type = (CalendarEventType)(int)_popupType,
                 Title = _popupTitle.Trim(),
                 Body = string.IsNullOrWhiteSpace(_popupContent) ? null : _popupContent.Trim(),
                 StartDate = _popupStartDate,
