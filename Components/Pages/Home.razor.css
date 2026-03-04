@@ -26,6 +26,42 @@
     align-items: center;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.65rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #dbe7ff;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.back-button:hover {
+    background: rgba(111, 77, 255, 0.25);
+}
+
+.couple-page.theme-light .back-button {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: #b9c8df;
+    color: #304c82;
+}
+
+.couple-page.theme-light .back-button:hover {
+    background: rgba(111, 77, 255, 0.12);
+}
+
 .hero-card {
     grid-area: hero;
 }
@@ -180,6 +216,22 @@
     font-size: 2rem;
     font-weight: 800;
     letter-spacing: -0.5px;
+}
+
+.name-me {
+    color: #ff7eb3;
+}
+
+.name-partner {
+    color: #7eaaff;
+}
+
+.couple-page.theme-light .name-me {
+    color: #e4558a;
+}
+
+.couple-page.theme-light .name-partner {
+    color: #3d7de0;
 }
 
 .couple-page.theme-light .memo-popup {

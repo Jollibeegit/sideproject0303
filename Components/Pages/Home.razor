@@ -23,10 +23,13 @@
             <h1>@(_myName + "이" + _partnerName)</h1>
             <p>커플 캘린더</p>
         </div>
-        @if (_showHomeLink)
-        {
-            <a href="#">Home</a>
-        }
+        <div class="header-right">
+            @if (_showHomeLink)
+            {
+                <a href="#">Home</a>
+            }
+            <a class="back-button" href="/">뒤로가기</a>
+        </div>
     </header>
 
     <section class="hero-card">
@@ -36,7 +39,7 @@
             <span>@GetInitial(_partnerName)</span>
         </div>
         <button type="button" class="setting-button" @onclick="OpenSettingsPopup">설정</button>
-        <h2>@_myName ❤ @_partnerName</h2>
+        <h2><span class="@GetNameHighlight(_myName)">@_myName</span> ❤ <span class="@GetNameHighlight(_partnerName)">@_partnerName</span></h2>
         <p>우리의 소중한 순간들을 함께 기록하고 공유해보세요.</p>
 
         <div class="chips-row">
@@ -583,6 +586,9 @@
     }
 
     private static string GetInitial(string name) => string.IsNullOrWhiteSpace(name) ? "?" : name[..1];
+
+    private string GetNameHighlight(string name) =>
+        name == _currentUserName ? "name-me" : "name-partner";
     private static string GetWeekdayClass(int index) => index switch
     {
         0 => "sun",
