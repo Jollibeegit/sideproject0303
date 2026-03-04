@@ -1,9 +1,20 @@
-﻿@page "/"
+@page "/"
 @rendermode InteractiveServer
 
 @using System.Globalization
+@using Microsoft.EntityFrameworkCore
+@using SideProject0303
+@using SideProject0303.Models
+@inject IDbContextFactory<AppDbContext> DbFactory
 
 <PageTitle>운진❤️학규 캘린더</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(_dbError))
+{
+    <div style="margin:12px; padding:10px 12px; border-radius:10px; background:#402020; color:#ffd4d4; border:1px solid #aa6666;">
+        DB 연결 오류: @_dbError
+    </div>
+}
 
 <main class="couple-page @(_isCompactMode ? "compact" : string.Empty) @(_isDarkMode ? "theme-dark" : "theme-light")">
     <header class="top-header">
@@ -243,6 +254,10 @@
     private DateTime _selectedDate = DateTime.Today;
     private DateTime _relationshipStartDate = new(2024, 7, 14);
     private readonly List<CalendarItem> _items = [];
+    
+    // Default DB code for the couple. Can be made dynamic via query string later.
+    private string _coupleCode = "ABCD1234";
+    
     private string _myName = "운진";
     private string _partnerName = "학규";
     private bool _showHomeLink = true;
@@ -268,6 +283,7 @@
     private bool _draftShowHomeLink;
     private bool _draftCompactMode;
     private bool _draftIsDarkMode;
+    private string? _dbError;
 
     private int UpcomingScheduleCount => _items.Count(x => x.Type == CalendarType.Schedule && x.Date.Date >= DateTime.Today);
     private int RelationshipDays => (DateTime.Today.Date - _relationshipStartDate.Date).Days + 1;
@@ -289,25 +305,66 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _items.AddRange(
-        [
-            new CalendarItem(1, DateTime.Today, CalendarType.Memo, "장보기"),
-            new CalendarItem(2, DateTime.Today.AddDays(2), CalendarType.Schedule, "영화 보기"),
-            new CalendarItem(3, DateTime.Today.AddDays(6), CalendarType.Anniversary, "만난 날")
-        ]);
-
         _draftRelationshipStartDate = _relationshipStartDate;
+        await LoadMonthAsync();
     }
 
-    private void MovePrevMonth() => _currentMonth = _currentMonth.AddMonths(-1);
-    private void MoveNextMonth() => _currentMonth = _currentMonth.AddMonths(1);
+    private async Task LoadMonthAsync()
+    {
+        try
+        {
+            _dbError = null;
+            await using var db = await DbFactory.CreateDbContextAsync();
 
-    private void MoveToday()
+            var couple = await db.Couples.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Code == _coupleCode);
+
+            if (couple is null)
+                return; // No couple found, stay with empty list
+
+            // Try to sync relationship start date if we have a couple record
+            _relationshipStartDate = couple.StartedOn.ToDateTime(TimeOnly.MinValue);
+            _draftRelationshipStartDate = _relationshipStartDate;
+
+            var start = new DateOnly(_currentMonth.Year, _currentMonth.Month, 1);
+            var end = start.AddMonths(1).AddDays(-1);
+
+            var rows = await db.CalendarEvents.AsNoTracking()
+                .Where(e => e.CoupleId == couple.Id && e.StartDate >= start && e.StartDate <= end)
+                .Select(e => new CalendarItem((int)e.Id,
+                    e.StartDate.ToDateTime(TimeOnly.MinValue),
+                    (CalendarType)e.Type,
+                    e.Title))
+                .ToListAsync();
+
+            _items.Clear();
+            _items.AddRange(rows);
+        }
+        catch (Exception ex)
+        {
+            _dbError = ex.Message;
+        }
+    }
+
+    private async Task MovePrevMonth()
+    {
+        _currentMonth = _currentMonth.AddMonths(-1);
+        await LoadMonthAsync();
+    }
+
+    private async Task MoveNextMonth()
+    {
+        _currentMonth = _currentMonth.AddMonths(1);
+        await LoadMonthAsync();
+    }
+
+    private async Task MoveToday()
     {
         _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         _selectedDate = DateTime.Today;
+        await LoadMonthAsync();
     }
 
     private void SelectDay(DateTime date)
@@ -489,47 +546,85 @@
         _editingText = string.Empty;
     }
 
-    private void SaveEditingItem()
+    private async Task SaveEditingItem()
     {
         if (_editingItemId is null || string.IsNullOrWhiteSpace(_editingText))
         {
             return;
         }
 
-        var index = _items.FindIndex(x => x.Id == _editingItemId.Value);
-        if (index >= 0)
+        await using var db = await DbFactory.CreateDbContextAsync();
+        
+        var dbItem = await db.CalendarEvents.FirstOrDefaultAsync(x => x.Id == _editingItemId.Value);
+        if (dbItem != null)
         {
-            var target = _items[index];
-            _items[index] = target with { Content = _editingText.Trim(), Type = _editingType };
+            dbItem.Title = _editingText.Trim();
+            dbItem.Type = (CalendarEventType)_editingType;
+            dbItem.UpdatedAtUtc = DateTime.UtcNow;
+            
+            await db.SaveChangesAsync();
         }
 
         CancelEditingItem();
+        await LoadMonthAsync();
     }
 
-    private void DeleteItem(int id)
+    private async Task DeleteItem(int id)
     {
-        var target = _items.FirstOrDefault(x => x.Id == id);
-        if (target is not null)
+        await using var db = await DbFactory.CreateDbContextAsync();
+        
+        var dbItem = await db.CalendarEvents.FirstOrDefaultAsync(x => x.Id == id);
+        if (dbItem != null)
         {
-            _items.Remove(target);
+            db.CalendarEvents.Remove(dbItem);
+            await db.SaveChangesAsync();
         }
 
         if (_editingItemId == id)
         {
             CancelEditingItem();
         }
+        
+        await LoadMonthAsync();
     }
 
-    private void SavePopupItem()
+    private async Task SavePopupItem()
     {
         if (string.IsNullOrWhiteSpace(_popupContent))
         {
             return;
         }
 
-        var newId = _items.Count == 0 ? 1 : _items.Max(x => x.Id) + 1;
-        _items.Add(new CalendarItem(newId, _selectedDate, _selectedType, _popupContent.Trim()));
-        ClosePopup();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var couple = await db.Couples.FirstOrDefaultAsync(c => c.Code == _coupleCode);
+            if (couple is null)
+            {
+                _dbError = "커플 정보를 찾을 수 없습니다.";
+                return;
+            }
+
+            db.CalendarEvents.Add(new CalendarEvent
+            {
+                CoupleId = couple.Id,
+                Type = (CalendarEventType)(int)_selectedType,
+                Title = _popupContent.Trim(),
+                StartDate = DateOnly.FromDateTime(_selectedDate),
+                IsAllDay = true,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            });
+
+            await db.SaveChangesAsync();
+            ClosePopup();
+            await LoadMonthAsync();
+        }
+        catch (Exception ex)
+        {
+            _dbError = $"이벤트 저장 실패: {ex.Message}";
+        }
     }
 
     private sealed record CalendarCell(DateTime Date, bool IsCurrentMonth, bool IsToday);

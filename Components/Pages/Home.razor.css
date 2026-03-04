@@ -324,9 +324,9 @@
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 0.98rem;
+    font-size: 0.88rem;
     letter-spacing: 0.02em;
-    min-height: 2.5rem;
+    min-height: 2rem;
     border-right: 1px solid #c7b2b9;
     border-bottom: 1px solid #c7b2b9;
 }
@@ -335,15 +335,16 @@
     border: none;
     border-top: 1px solid #d4d9e4;
     border-right: 1px solid #d4d9e4;
-    min-height: 3rem;
+    min-height: 2.4rem;
     text-align: left;
-    padding: 0.28rem;
+    padding: 0.2rem;
     color: #f7fbff;
     background: #0f1526;
     font-weight: 600;
     display: flex;
     flex-direction: column;
     gap: 0.12rem;
+    overflow: hidden;
 }
 
 .day-number {
@@ -615,14 +616,10 @@
     font-size: 0.88rem;
 }
 
-@media (max-width: 399px) {
+@media (max-width: 479px) {
     .calendar-title-row {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .hero-card h2 {
-        font-size: 1.7rem;
     }
 
     .month-nav {
@@ -633,6 +630,15 @@
 @media (min-width: 700px) {
     .couple-page {
         padding-top: 1.1rem;
+    }
+
+    .day-cell {
+        min-height: 3rem;
+    }
+
+    .weekday {
+        font-size: 0.98rem;
+        min-height: 2.4rem;
     }
 }
 
@@ -645,17 +651,7 @@
         align-items: start;
     }
 
-    .calendar-card {
-        height: calc(100dvh - 6rem);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .calendar-grid {
-        flex: 1;
-    }
-
     .day-cell {
-        min-height: clamp(2.7rem, 7.5vh, 4.1rem);
+        min-height: 3.5rem;
     }
 }

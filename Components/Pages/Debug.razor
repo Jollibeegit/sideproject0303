@@ -1,0 +1,255 @@
+@page "/debug"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using SideProject0303
+@using SideProject0303.Models
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ApiClient ApiClient
+
+<PageTitle>디버그 페이지</PageTitle>
+
+<main style="padding: 20px; max-width: 800px; margin: 0 auto;">
+    <h1>🔧 디버그 페이지</h1>
+    
+    <section style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2>1️⃣ DB 연결 테스트</h2>
+        <button @onclick="TestDbConnection" style="padding: 10px 20px; margin: 10px 0;">DB 연결 확인</button>
+        @if (!string.IsNullOrWhiteSpace(_dbConnectionResult))
+        {
+            <div style="margin-top: 10px; padding: 10px; background: @(_dbConnectionSuccess ? "#d4edda" : "#f8d7da"); border-radius: 5px;">
+                @_dbConnectionResult
+            </div>
+        }
+    </section>
+
+    <section style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2>2️⃣ Couple 데이터 조회</h2>
+        <button @onclick="FetchCouples" style="padding: 10px 20px; margin: 10px 0;">커플 데이터 조회</button>
+        @if (_couples.Count > 0)
+        {
+            <div style="margin-top: 10px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">ID</th>
+                            <th style="padding: 8px; text-align: left;">Code</th>
+                            <th style="padding: 8px; text-align: left;">StartedOn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var couple in _couples)
+                        {
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 8px;">@couple.Id</td>
+                                <td style="padding: 8px;">@couple.Code</td>
+                                <td style="padding: 8px;">@couple.StartedOn</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(_coupleResult))
+        {
+            <div style="margin-top: 10px; padding: 10px; background: #f8d7da; border-radius: 5px;">
+                @_coupleResult
+            </div>
+        }
+    </section>
+
+    <section style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2>3️⃣ CalendarEvent 데이터 조회</h2>
+        <button @onclick="FetchEvents" style="padding: 10px 20px; margin: 10px 0;">이벤트 데이터 조회</button>
+        @if (_events.Count > 0)
+        {
+            <div style="margin-top: 10px;">
+                <p><strong>총 @_events.Count 개의 이벤트</strong></p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">ID</th>
+                            <th style="padding: 8px; text-align: left;">Title</th>
+                            <th style="padding: 8px; text-align: left;">Type</th>
+                            <th style="padding: 8px; text-align: left;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var evt in _events.Take(10))
+                        {
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 8px;">@evt.Id</td>
+                                <td style="padding: 8px;">@evt.Title</td>
+                                <td style="padding: 8px;">@evt.Type</td>
+                                <td style="padding: 8px;">@evt.StartDate</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(_eventResult))
+        {
+            <div style="margin-top: 10px; padding: 10px; background: @(_eventSuccess ? "#d4edda" : "#f8d7da"); border-radius: 5px;">
+                @_eventResult
+            </div>
+        }
+    </section>
+
+    <section style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2>4️⃣ API 테스트 - CalendarEvent 생성</h2>
+        <div style="margin: 10px 0;">
+            <label>커플 코드: 
+                <input type="text" @bind="_testCoupleCode" placeholder="ABCD1234" style="padding: 5px; width: 150px;" />
+            </label>
+        </div>
+        <div style="margin: 10px 0;">
+            <label>제목: 
+                <input type="text" @bind="_testTitle" placeholder="테스트 메모" style="padding: 5px; width: 200px;" />
+            </label>
+        </div>
+        <button @onclick="TestCreateEvent" style="padding: 10px 20px; margin: 10px 0;">API 테스트 - 이벤트 생성</button>
+        @if (!string.IsNullOrWhiteSpace(_apiResult))
+        {
+            <div style="margin-top: 10px; padding: 10px; background: @(_apiSuccess ? "#d4edda" : "#f8d7da"); border-radius: 5px;">
+                @_apiResult
+            </div>
+        }
+    </section>
+
+    <section style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+        <h2>5️⃣ API 테스트 - 요약 정보</h2>
+        <div style="margin: 10px 0;">
+            <label>커플 코드: 
+                <input type="text" @bind="_summaryCode" placeholder="ABCD1234" style="padding: 5px; width: 150px;" />
+            </label>
+        </div>
+        <button @onclick="TestGetSummary" style="padding: 10px 20px; margin: 10px 0;">API 테스트 - 요약 정보</button>
+        @if (!string.IsNullOrWhiteSpace(_summaryResult))
+        {
+            <div style="margin-top: 10px; padding: 10px; background: @(_summarySuccess ? "#d4edda" : "#f8d7da"); border-radius: 5px; white-space: pre-wrap;">
+                @_summaryResult
+            </div>
+        }
+    </section>
+
+    <hr style="margin: 30px 0;" />
+    <a href="/" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+        홈으로 돌아가기
+    </a>
+</main>
+
+@code {
+    private string _dbConnectionResult = string.Empty;
+    private bool _dbConnectionSuccess;
+    private List<Couple> _couples = [];
+    private string _coupleResult = string.Empty;
+    private List<CalendarEvent> _events = [];
+    private string _eventResult = string.Empty;
+    private bool _eventSuccess;
+    private string _testCoupleCode = "ABCD1234";
+    private string _testTitle = "테스트 메모";
+    private string _apiResult = string.Empty;
+    private bool _apiSuccess;
+    private string _summaryCode = "ABCD1234";
+    private string _summaryResult = string.Empty;
+    private bool _summarySuccess;
+
+    private async Task TestDbConnection()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var count = await db.Couples.CountAsync();
+            _dbConnectionSuccess = true;
+            _dbConnectionResult = $"✅ DB 연결 성공! (Couples 테이블: {count}개)";
+        }
+        catch (Exception ex)
+        {
+            _dbConnectionSuccess = false;
+            _dbConnectionResult = $"❌ DB 연결 실패: {ex.Message}";
+        }
+    }
+
+    private async Task FetchCouples()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _couples = await db.Couples.AsNoTracking().ToListAsync();
+            _coupleResult = $"✅ {_couples.Count}개의 커플 조회 완료";
+        }
+        catch (Exception ex)
+        {
+            _coupleResult = $"❌ 조회 실패: {ex.Message}";
+        }
+    }
+
+    private async Task FetchEvents()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _events = await db.CalendarEvents.AsNoTracking().ToListAsync();
+            _eventSuccess = true;
+            _eventResult = $"✅ {_events.Count}개의 이벤트 조회 완료";
+        }
+        catch (Exception ex)
+        {
+            _eventSuccess = false;
+            _eventResult = $"❌ 조회 실패: {ex.Message}";
+        }
+    }
+
+    private async Task TestCreateEvent()
+    {
+        try
+        {
+            var dto = new CreateEventDto
+            {
+                CoupleCode = _testCoupleCode,
+                Type = CalendarEventType.Memo,
+                Title = _testTitle,
+                StartDate = DateOnly.FromDateTime(DateTime.Today),
+                IsAllDay = true
+            };
+
+            var result = await ApiClient.CreateEventAsync(dto);
+            _apiSuccess = true;
+            _apiResult = $"✅ 이벤트 생성 성공!\n\nID: {result?.Id}\nTitle: {result?.Title}\nDate: {result?.StartDate}";
+        }
+        catch (Exception ex)
+        {
+            _apiSuccess = false;
+            _apiResult = $"❌ 생성 실패: {ex.Message}";
+        }
+    }
+
+    private async Task TestGetSummary()
+    {
+        try
+        {
+            var result = await ApiClient.GetSummaryAsync(_summaryCode);
+            if (result != null)
+            {
+                _summarySuccess = true;
+                _summaryResult = $"✅ 요약 정보 조회 성공!\n\n" +
+                    $"시작일: {result.StartedOn}\n" +
+                    $"D+일수: {result.DPlusDays}\n" +
+                    $"다가오는 일정: {result.UpcomingSchedules}\n" +
+                    $"메모: {result.TotalMemos}\n" +
+                    $"기념일: {result.TotalAnniversaries}";
+            }
+            else
+            {
+                _summarySuccess = false;
+                _summaryResult = "❌ 요약 정보 조회 실패: null 반환";
+            }
+        }
+        catch (Exception ex)
+        {
+            _summarySuccess = false;
+            _summaryResult = $"❌ 조회 실패: {ex.Message}";
+        }
+    }
+}
