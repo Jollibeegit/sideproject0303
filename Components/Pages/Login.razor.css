@@ -1,0 +1,174 @@
+.login-page {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: linear-gradient(160deg, #070d1a 0%, #0f1b34 50%, #0a1225 100%);
+}
+
+.login-card {
+    width: min(92%, 560px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    background: linear-gradient(160deg, rgba(14, 24, 48, 0.95) 0%, rgba(11, 19, 37, 0.98) 100%);
+    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.4rem, 4vw, 2.5rem);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    color: #eaf0ff;
+}
+
+.login-icon {
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    margin-bottom: 0.6rem;
+}
+
+.login-card h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+    margin: 0.6rem 0 clamp(1.2rem, 4vw, 2rem);
+    color: #9db3d6;
+    font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+    line-height: 1.5;
+}
+
+.login-error {
+    background: rgba(210, 79, 98, 0.15);
+    border: 1px solid rgba(210, 79, 98, 0.35);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+    color: #ffbdc7;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+/* ── 프로필 선택 ── */
+.profile-row {
+    display: flex;
+    gap: clamp(0.8rem, 3vw, 1.6rem);
+    justify-content: center;
+}
+
+.profile-card {
+    flex: 1;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(1.4rem, 4vw, 2.2rem);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(19, 34, 61, 0.9) 0%, rgba(12, 21, 38, 0.95) 100%);
+    color: #eaf0ff;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.profile-card:hover {
+    border-color: rgba(111, 77, 255, 0.5);
+    box-shadow: 0 0 28px rgba(111, 77, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.profile-card:active {
+    transform: scale(0.97);
+}
+
+.profile-avatar {
+    width: clamp(5.5rem, 16vw, 7.5rem);
+    height: clamp(5.5rem, 16vw, 7.5rem);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #6f4dff, #a78bfa);
+    color: white;
+    box-shadow: 0 6px 24px rgba(111, 77, 255, 0.4);
+}
+
+/* ── 데스크탑 ── */
+@media (min-width: 700px) {
+    .login-card {
+        padding: 3.5rem 3rem;
+    }
+
+    .profile-card {
+        max-width: 240px;
+        padding: 2.4rem 1.6rem;
+    }
+
+    .profile-avatar {
+        width: 8rem;
+        height: 8rem;
+        font-size: 2rem;
+    }
+}
+
+/* ── 모바일: 화면 꽉 차게 ── */
+@media (max-width: 600px) {
+    .login-page {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .login-card {
+        width: 100%;
+        min-height: 100dvh;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.2rem;
+        box-shadow: none;
+    }
+
+    .profile-row {
+        gap: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-card {
+        max-width: none;
+        flex: 1;
+        padding: 3.7rem 1rem;
+        min-height: 52.5dvh;
+        justify-content: center;
+    }
+
+    .profile-avatar {
+        width: 7.35rem;
+        height: 7.35rem;
+        font-size: 1.7rem;
+    }
+}
+
+/* ── 아주 작은 화면 (≤360px) ── */
+@media (max-width: 360px) {
+    .login-card {
+        padding: 1.5rem 0.8rem;
+    }
+
+    .profile-card {
+        padding: 2.6rem 0.6rem;
+        border-radius: 16px;
+        min-height: 47dvh;
+    }
+
+    .profile-avatar {
+        width: 6.3rem;
+        height: 6.3rem;
+        font-size: 1.4rem;
+    }
+}
+

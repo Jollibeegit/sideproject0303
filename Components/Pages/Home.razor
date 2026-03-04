@@ -1,4 +1,4 @@
-@page "/"
+@page "/{UserId:long}"
 @rendermode InteractiveServer
 
 @using System.Globalization
@@ -6,8 +6,9 @@
 @using SideProject0303
 @using SideProject0303.Models
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
 
-<PageTitle>운진❤️학규 캘린더</PageTitle>
+<PageTitle>@(_myName)❤️@(_partnerName) 캘린더</PageTitle>
 
 @if (!string.IsNullOrWhiteSpace(_dbError))
 {
@@ -89,7 +90,7 @@
                     <span class="day-number @GetDayNumberClass(day.Date)">@day.Date.Day</span>
                     @foreach (var item in dayItems.Take(2))
                     {
-                        <span class="day-item @GetDayItemClass(item)">@item.Content</span>
+                        <span class="day-item @GetDayItemClass(item)">@GetDisplayLabel(item)</span>
                     }
                     @if (dayItems.Count > 2)
                     {
@@ -107,12 +108,22 @@
                 <h3>@GetTypeLabel(_selectedType) 등록</h3>
 
                 <label>
-                    날짜
-                    <input type="text" value="@_selectedDate.ToString("yyyy-MM-dd")" readonly />
+                    시작일
+                    <input type="date" @bind="_popupStartDate" />
                 </label>
 
                 <label>
-                    내용
+                    종료일
+                    <input type="date" @bind="_popupEndDate" />
+                </label>
+
+                <label>
+                    제목
+                    <input type="text" @bind="_popupTitle" maxlength="80" placeholder="예: 영화 보기" />
+                </label>
+
+                <label>
+                    내용(선택)
                     <textarea @bind="_popupContent" rows="4" maxlength="100" placeholder="내용을 입력하세요"></textarea>
                 </label>
 
@@ -141,7 +152,7 @@
                         {
                             <li>
                                 <span>@item.Date.ToString("yyyy-MM-dd")</span>
-                                <strong>@item.Content</strong>
+                                <strong>@GetDisplayLabel(item)</strong>
                             </li>
                         }
                     </ul>
@@ -229,7 +240,7 @@
                                 else
                                 {
                                     <span>@GetTypeLabel(item.Type) · @item.Date.ToString("yyyy-MM-dd")</span>
-                                    <strong>@item.Content</strong>
+                                    <strong>@GetDisplayLabel(item)</strong>
                                     <div class="item-actions">
                                         <button type="button" class="ghost" @onclick="() => StartEditingItem(item)">수정</button>
                                         <button type="button" class="danger" @onclick="() => DeleteItem(item.Id)">삭제</button>
@@ -255,8 +266,10 @@
     private DateTime _relationshipStartDate = new(2024, 7, 14);
     private readonly List<CalendarItem> _items = [];
     
-    // Default DB code for the couple. Can be made dynamic via query string later.
-    private string _coupleCode = "ABCD1234";
+    [Parameter] public long UserId { get; set; }
+    private long _coupleId;
+    private string _currentUserName = "";
+    private Dictionary<long, string> _userNames = new();
     
     private string _myName = "운진";
     private string _partnerName = "학규";
@@ -265,7 +278,10 @@
     private bool _isDarkMode = true;
     private CalendarType _selectedType = CalendarType.Memo;
     private bool _isPopupOpen;
+    private string _popupTitle = string.Empty;
     private string _popupContent = string.Empty;
+    private DateOnly _popupStartDate;
+    private DateOnly _popupEndDate;
     private bool _isListPopupOpen;
     private CalendarType _listPopupType;
     private bool _isSettingsPopupOpen;
@@ -307,6 +323,30 @@
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == UserId);
+            if (user is null)
+            {
+                Nav.NavigateTo("/");
+                return;
+            }
+
+            _coupleId = user.CoupleId;
+            _currentUserName = user.DisplayName;
+
+            var users = await db.Users.AsNoTracking()
+                .Where(u => u.CoupleId == _coupleId)
+                .ToListAsync();
+            _userNames = users.ToDictionary(u => u.Id, u => u.DisplayName);
+        }
+        catch
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
         _draftRelationshipStartDate = _relationshipStartDate;
         await LoadMonthAsync();
     }
@@ -319,10 +359,10 @@
             await using var db = await DbFactory.CreateDbContextAsync();
 
             var couple = await db.Couples.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Code == _coupleCode);
+                .FirstOrDefaultAsync(c => c.Id == _coupleId);
 
             if (couple is null)
-                return; // No couple found, stay with empty list
+                return;
 
             // Try to sync relationship start date if we have a couple record
             _relationshipStartDate = couple.StartedOn.ToDateTime(TimeOnly.MinValue);
@@ -336,7 +376,8 @@
                 .Select(e => new CalendarItem((int)e.Id,
                     e.StartDate.ToDateTime(TimeOnly.MinValue),
                     (CalendarType)e.Type,
-                    e.Title))
+                    e.Title,
+                    e.CreatedByUserId))
                 .ToListAsync();
 
             _items.Clear();
@@ -370,6 +411,9 @@
     private void SelectDay(DateTime date)
     {
         _selectedDate = date;
+        _popupStartDate = DateOnly.FromDateTime(date);
+        _popupEndDate = DateOnly.FromDateTime(date);
+        _popupTitle = string.Empty;
         _popupContent = string.Empty;
         _isPopupOpen = true;
     }
@@ -419,7 +463,10 @@
     private void ClosePopup()
     {
         _isPopupOpen = false;
+        _popupTitle = string.Empty;
         _popupContent = string.Empty;
+        _popupStartDate = default;
+        _popupEndDate = default;
     }
 
     private void OpenListPopup(CalendarType type)
@@ -450,7 +497,7 @@
         _editingText = string.Empty;
     }
 
-    private void SaveSettings()
+    private async Task SaveSettings()
     {
         if (!string.IsNullOrWhiteSpace(_draftMyName))
         {
@@ -467,6 +514,23 @@
         _isCompactMode = _draftCompactMode;
         _isDarkMode = _draftIsDarkMode;
         _isSettingsPopupOpen = false;
+
+        // 사귄 날짜를 DB에 저장
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var couple = await db.Couples.FirstOrDefaultAsync(c => c.Id == _coupleId);
+            if (couple is not null)
+            {
+                couple.StartedOn = DateOnly.FromDateTime(_relationshipStartDate);
+                couple.UpdatedAtUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _dbError = $"설정 저장 실패: {ex.Message}";
+        }
     }
 
     private bool IsSelected(DateTime date) => _selectedDate.Date == date.Date;
@@ -590,7 +654,7 @@
 
     private async Task SavePopupItem()
     {
-        if (string.IsNullOrWhiteSpace(_popupContent))
+        if (string.IsNullOrWhiteSpace(_popupTitle))
         {
             return;
         }
@@ -599,7 +663,7 @@
         {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            var couple = await db.Couples.FirstOrDefaultAsync(c => c.Code == _coupleCode);
+            var couple = await db.Couples.FirstOrDefaultAsync(c => c.Id == _coupleId);
             if (couple is null)
             {
                 _dbError = "커플 정보를 찾을 수 없습니다.";
@@ -610,9 +674,12 @@
             {
                 CoupleId = couple.Id,
                 Type = (CalendarEventType)(int)_selectedType,
-                Title = _popupContent.Trim(),
-                StartDate = DateOnly.FromDateTime(_selectedDate),
+                Title = _popupTitle.Trim(),
+                Body = string.IsNullOrWhiteSpace(_popupContent) ? null : _popupContent.Trim(),
+                StartDate = _popupStartDate,
+                EndDate = _popupEndDate != _popupStartDate ? _popupEndDate : null,
                 IsAllDay = true,
+                CreatedByUserId = UserId,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             });
@@ -627,8 +694,16 @@
         }
     }
 
+    private string GetDisplayLabel(CalendarItem item)
+    {
+        var name = item.CreatedByUserId.HasValue
+            ? _userNames.GetValueOrDefault(item.CreatedByUserId.Value, "?")
+            : "?";
+        return $"{name} - {item.Content}";
+    }
+
     private sealed record CalendarCell(DateTime Date, bool IsCurrentMonth, bool IsToday);
-    private sealed record CalendarItem(int Id, DateTime Date, CalendarType Type, string Content);
+    private sealed record CalendarItem(int Id, DateTime Date, CalendarType Type, string Content, long? CreatedByUserId);
 
     private enum CalendarType
     {

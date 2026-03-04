@@ -1,0 +1,60 @@
+@page "/"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using SideProject0303
+@using SideProject0303.Models
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>커플 캘린더</PageTitle>
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-icon">운진이학규</div>
+        <h1>우리끼리 쓰는 캘린더</h1>
+        <p class="login-subtitle">누구세요~?</p>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="login-error">@_error</div>
+        }
+
+        @if (_users.Count > 0)
+        {
+            <div class="profile-row">
+                @foreach (var user in _users)
+                {
+                    <button type="button" class="profile-card" @onclick="() => Enter(user)">
+                        <span class="profile-avatar">@user.DisplayName</span>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? _error;
+    private List<User> _users = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _users = await db.Users.AsNoTracking()
+                .OrderBy(u => u.Id)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"유저 목록을 불러올 수 없습니다: {ex.Message}";
+        }
+    }
+
+    private void Enter(User user)
+    {
+        Nav.NavigateTo($"/{user.Id}");
+    }
+}

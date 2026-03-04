@@ -14,8 +14,11 @@
                     <button class="@SegClass(CalendarEventType.Schedule)" @onclick="() => Pick(CalendarEventType.Schedule)">일정</button>
                 </div>
 
-                <label>날짜</label>
-                <input type="date" class="input" value="@dateValue" @onchange="OnDateChange" />
+                <label>시작일</label>
+                <input type="date" class="input" @bind="startDate" />
+
+                <label>종료일</label>
+                <input type="date" class="input" @bind="endDate" />
 
                 <label>내용</label>
                 <input class="input" placeholder="예: 영화 보기" @bind="title" />
@@ -43,30 +46,33 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<EventModalSaveRequest> OnSave { get; set; }
 
-    DateOnly date;
+    DateOnly startDate;
+    DateOnly endDate;
     string title = "";
     string? body;
-
-    string dateValue => $"{date:yyyy-MM-dd}";
+    bool _previousOpen;
 
     protected override void OnParametersSet()
     {
-        date = InitialDate;
+        // 모달이 닫힌→열린 상태로 전환될 때만 폼 초기화 (매 렌더마다 리셋 방지)
+        if (Open && !_previousOpen)
+        {
+            startDate = InitialDate;
+            endDate = InitialDate;
+            title = "";
+            body = "";
 
-        if (Editing is not null && Mode == "edit")
-        {
-            SelectedType = Editing.Type;
-            title = Editing.Title;
-            body = Editing.Body;
-            date = Editing.StartDate;
+            if (Editing is not null && Mode == "edit")
+            {
+                SelectedType = Editing.Type;
+                title = Editing.Title;
+                body = Editing.Body;
+                startDate = Editing.StartDate;
+                endDate = Editing.EndDate ?? Editing.StartDate;
+            }
         }
-        else
-        {
-            // create 모드 기본값
-            if (string.IsNullOrWhiteSpace(title))
-                title = "";
-            body ??= "";
-        }
+
+        _previousOpen = Open;
     }
 
     void Pick(CalendarEventType t) => SelectedType = t;
@@ -78,12 +84,6 @@
         await OnClose.InvokeAsync();
     }
 
-    void OnDateChange(ChangeEventArgs e)
-    {
-        if (DateOnly.TryParse(e.Value?.ToString(), out var d))
-            date = d;
-    }
-
     async Task Save()
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -92,7 +92,8 @@
         var req = new EventModalSaveRequest
         {
             Type = SelectedType,
-            Date = date,
+            StartDate = startDate,
+            EndDate = endDate != startDate ? endDate : null,
             Title = title.Trim(),
             Body = string.IsNullOrWhiteSpace(body) ? null : body.Trim()
         };
