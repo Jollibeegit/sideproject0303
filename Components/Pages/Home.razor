@@ -1,5 +1,6 @@
 @page "/{UserId:long}"
 @rendermode InteractiveServer
+@implements IDisposable
 
 @using System.Globalization
 @using Microsoft.EntityFrameworkCore
@@ -35,12 +36,21 @@
 
     <section class="hero-card">
         <button type="button" class="setting-button" @onclick="OpenSettingsPopup">설정</button>
+
+        <div class="live-clock">
+            <span class="clock-date clock-inline">
+                @_koreanNow.ToString("yyyy년 MM월 dd일", CultureInfo.GetCultureInfo("ko-KR"))
+                @_koreanNow.ToString("dddd", CultureInfo.GetCultureInfo("ko-KR"))
+                @_koreanNow.ToString("HH:mm:ss")
+            </span>
+        </div>
+
         <h2><span class="@GetNameHighlight(_myName)">@_myName</span> ❤ <span class="@GetNameHighlight(_partnerName)">@_partnerName</span></h2>
         <p>우리의 소중한 순간들을 함께 기록하고 공유해보세요.</p>
 
         <div class="chips-row">
             <span>사귄지 <strong>D+@RelationshipDays</strong></span>
-            <span>오늘 <strong>@DateTime.Today.ToString("MM-dd")</strong></span>
+            <span>오늘 <strong>@KoreanToday.ToString("MM-dd")</strong></span>
         </div>
 
         <div class="stats-row">
@@ -305,9 +315,15 @@
 </main>
 
 @code {
+    private static DateTime KoreanToday => DateTime.UtcNow.AddHours(9).Date;
+    private static DateTime KoreanNow => DateTime.UtcNow.AddHours(9);
+
+    private DateTime _koreanNow = KoreanNow;
+    private Timer? _clockTimer;
+
     private static readonly string[] WeekDays = ["일", "월", "화", "수", "목", "금", "토"];
-    private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
-    private DateTime _selectedDate = DateTime.Today;
+    private DateTime _currentMonth = new(KoreanToday.Year, KoreanToday.Month, 1);
+    private DateTime _selectedDate = KoreanToday;
     private DateTime _relationshipStartDate = new(2024, 7, 14);
     private readonly List<CalendarItem> _items = [];
     
@@ -351,8 +367,8 @@
     private bool _draftIsDarkMode;
     private string? _dbError;
 
-    private int UpcomingScheduleCount => _items.Count(x => x.Type == CalendarType.Schedule && x.Date.Date >= DateTime.Today);
-    private int RelationshipDays => (DateTime.Today.Date - _relationshipStartDate.Date).Days + 1;
+    private int UpcomingScheduleCount => _items.Count(x => x.Type == CalendarType.Schedule && x.Date.Date >= KoreanToday);
+    private int RelationshipDays => (KoreanToday - _relationshipStartDate.Date).Days + 1;
 
     private string CurrentMonthTitle => _currentMonth.ToString("yyyy년 MM월", CultureInfo.GetCultureInfo("ko-KR"));
 
@@ -365,7 +381,7 @@
                 .Select(index =>
                 {
                     var date = start.AddDays(index);
-                    return new CalendarCell(date, date.Month == _currentMonth.Month, date.Date == DateTime.Today);
+                    return new CalendarCell(date, date.Month == _currentMonth.Month, date.Date == KoreanToday);
                 })
                 .ToList();
         }
@@ -399,6 +415,12 @@
 
         _draftRelationshipStartDate = _relationshipStartDate;
         await LoadMonthAsync();
+
+        _clockTimer = new Timer(_ =>
+        {
+            _koreanNow = KoreanNow;
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
 
     private async Task LoadMonthAsync()
@@ -454,8 +476,8 @@
 
     private async Task MoveToday()
     {
-        _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        _selectedDate = DateTime.Today;
+        _currentMonth = new DateTime(KoreanToday.Year, KoreanToday.Month, 1);
+        _selectedDate = KoreanToday;
         await LoadMonthAsync();
     }
 
@@ -659,7 +681,7 @@
 
         if (_listPopupType == CalendarType.Schedule)
         {
-            query = query.Where(x => x.Date.Date >= DateTime.Today);
+            query = query.Where(x => x.Date.Date >= KoreanToday);
         }
 
         return query.OrderBy(x => x.Date).ToList();
@@ -796,5 +818,12 @@
         Memo,
         Anniversary,
         Schedule
+    }
+
+    public void Dispose()
+    {
+        _clockTimer?.Dispose();
+        _pressCts?.Cancel();
+        _pressCts?.Dispose();
     }
 }
