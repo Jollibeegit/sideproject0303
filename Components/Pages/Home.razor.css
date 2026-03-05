@@ -52,6 +52,41 @@
     background: rgba(111, 77, 255, 0.25);
 }
 
+.refresh-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.65rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #dbe7ff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.refresh-button:hover {
+    background: rgba(111, 77, 255, 0.25);
+}
+
+.refresh-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.couple-page.theme-light .refresh-button {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: #b9c8df;
+    color: #304c82;
+}
+
+.couple-page.theme-light .refresh-button:hover {
+    background: rgba(111, 77, 255, 0.12);
+}
+
 .couple-page.theme-light .back-button {
     background: rgba(0, 0, 0, 0.05);
     border-color: #b9c8df;
@@ -594,6 +629,17 @@
     justify-content: center;
     padding: 1rem;
     z-index: 1200;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .memo-popup {
@@ -603,6 +649,7 @@
     background: linear-gradient(160deg, #0e1830 0%, #0b1325 100%);
     padding: 0.95rem;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .memo-popup h3 {
@@ -782,6 +829,52 @@
 
 .detail-list li strong {
     font-size: 0.9rem;
+}
+
+.detail-list li .item-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.detail-list li .item-body {
+    font-size: 0.78rem;
+    color: #9cb0d5;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.couple-page.theme-light .detail-list li .item-body {
+    color: #5e6f8e;
+}
+
+.day-items-popup .edit-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #9cb0d5;
+    margin-bottom: 0.1rem;
+}
+
+.day-items-popup .edit-form textarea {
+    width: 100%;
+    border: 1px solid #526898;
+    border-radius: 8px;
+    background: #10203d;
+    color: #eef4ff;
+    padding: 0.36rem 0.5rem;
+    font-size: 0.82rem;
+    resize: vertical;
+    min-height: 44px;
+}
+
+.couple-page.theme-light .day-items-popup .edit-form textarea {
+    border-color: #b8cae7;
+    background: #ffffff;
+    color: #243557;
+}
+
+.couple-page.theme-light .day-items-popup .edit-label {
+    color: #5e6f8e;
 }
 
 .day-items-popup .edit-form {

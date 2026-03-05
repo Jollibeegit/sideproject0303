@@ -28,6 +28,7 @@
             {
                 <a href="#">Home</a>
             }
+            <button type="button" class="refresh-button" @onclick="RefreshData" disabled="@_isRefreshing">새로고침</button>
             <a class="back-button" href="/">뒤로가기</a>
         </div>
     </header>
@@ -112,13 +113,14 @@
                             </span>
                         }
                     </div>
-                    @if (dayItems.Count > 0)
+                    @{ var visibleMax = 3; }
+                    @foreach (var di in dayItems.Take(visibleMax))
                     {
-                        <span class="day-item @GetDayItemClass(dayItems[0])">@dayItems[0].Content</span>
+                        <span class="day-item @GetDayItemClass(di)">@GetDayItemLabel(di)</span>
                     }
-                    @if (dayItems.Count > 1)
+                    @if (dayItems.Count > visibleMax)
                     {
-                        <span class="day-item more">+@(dayItems.Count - 1)</span>
+                        <span class="day-item more">+@(dayItems.Count - visibleMax)</span>
                     }
                 </button>
             }
@@ -182,7 +184,11 @@
                         {
                             <li>
                                 <span>@item.Date.ToString("yyyy-MM-dd")</span>
-                                <strong>@GetDisplayLabel(item)</strong>
+                                <strong class="item-title">@GetDisplayLabel(item)</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.Body))
+                                {
+                                    <span class="item-body">@item.Body</span>
+                                }
                             </li>
                         }
                     </ul>
@@ -253,24 +259,33 @@
                         {
                             <li>
                                 @if (_editingItemId == item.Id)
-                                {
-                                    <div class="edit-form">
-                                        <select @bind="_editingType">
-                                            <option value="@CalendarType.Memo">메모</option>
-                                            <option value="@CalendarType.Anniversary">기념일</option>
-                                            <option value="@CalendarType.Schedule">일정</option>
-                                        </select>
-                                        <input type="text" @bind="_editingText" maxlength="100" />
-                                        <div class="item-actions">
-                                            <button type="button" class="save" @onclick="SaveEditingItem">저장</button>
-                                            <button type="button" class="ghost" @onclick="CancelEditingItem">취소</button>
-                                        </div>
-                                    </div>
-                                }
+                                                {
+                                                    <div class="edit-form">
+                                                        <select @bind="_editingType">
+                                                            <option value="@CalendarType.Memo">메모</option>
+                                                            <option value="@CalendarType.Anniversary">기념일</option>
+                                                            <option value="@CalendarType.Schedule">일정</option>
+                                                        </select>
+                                                        <label class="edit-label">날짜</label>
+                                                        <input type="date" @bind="_editingDate" />
+                                                        <label class="edit-label">제목</label>
+                                                        <input type="text" @bind="_editingText" maxlength="80" placeholder="제목" />
+                                                        <label class="edit-label">내용(선택)</label>
+                                                        <textarea @bind="_editingBody" rows="2" maxlength="100" placeholder="내용을 입력하세요"></textarea>
+                                                        <div class="item-actions">
+                                                            <button type="button" class="save" @onclick="SaveEditingItem">저장</button>
+                                                            <button type="button" class="ghost" @onclick="CancelEditingItem">취소</button>
+                                                        </div>
+                                                    </div>
+                                                }
                                 else
                                 {
                                     <span>@GetTypeLabel(item.Type) · @item.Date.ToString("yyyy-MM-dd")</span>
-                                    <strong>@GetDisplayLabel(item)</strong>
+                                    <strong class="item-title">@GetDisplayLabel(item)</strong>
+                                    @if (!string.IsNullOrWhiteSpace(item.Body))
+                                    {
+                                        <span class="item-body">@item.Body</span>
+                                    }
                                     <div class="item-actions">
                                         <button type="button" class="ghost" @onclick="() => StartEditingItem(item)">수정</button>
                                         <button type="button" class="danger" @onclick="() => DeleteItem(item.Id)">삭제</button>
@@ -322,8 +337,11 @@
     private int? _editingItemId;
     private string _editingText = string.Empty;
     private CalendarType _editingType;
+    private DateOnly _editingDate;
+    private string _editingBody = string.Empty;
     private CancellationTokenSource? _pressCts;
     private bool _longPressTriggered;
+    private bool _isRefreshing;
 
     private string _draftMyName = string.Empty;
     private string _draftPartnerName = string.Empty;
@@ -409,6 +427,7 @@
                     e.StartDate.ToDateTime(TimeOnly.MinValue),
                     (CalendarType)e.Type,
                     e.Title,
+                    e.Body,
                     e.CreatedByUserId))
                 .ToListAsync();
 
@@ -438,6 +457,13 @@
         _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         _selectedDate = DateTime.Today;
         await LoadMonthAsync();
+    }
+
+    private async Task RefreshData()
+    {
+        _isRefreshing = true;
+        await LoadMonthAsync();
+        _isRefreshing = false;
     }
 
     private void SelectDay(DateTime date)
@@ -649,12 +675,15 @@
         _editingItemId = item.Id;
         _editingText = item.Content;
         _editingType = item.Type;
+        _editingDate = DateOnly.FromDateTime(item.Date);
+        _editingBody = item.Body ?? string.Empty;
     }
 
     private void CancelEditingItem()
     {
         _editingItemId = null;
         _editingText = string.Empty;
+        _editingBody = string.Empty;
     }
 
     private async Task SaveEditingItem()
@@ -671,8 +700,10 @@
         {
             dbItem.Title = _editingText.Trim();
             dbItem.Type = (CalendarEventType)_editingType;
+            dbItem.StartDate = _editingDate;
+            dbItem.Body = string.IsNullOrWhiteSpace(_editingBody) ? null : _editingBody.Trim();
             dbItem.UpdatedAtUtc = DateTime.UtcNow;
-            
+
             await db.SaveChangesAsync();
         }
 
@@ -749,8 +780,16 @@
         return $"{name} - {item.Content}";
     }
 
+    private string GetDayItemLabel(CalendarItem item)
+    {
+        var name = item.CreatedByUserId.HasValue
+            ? _userNames.GetValueOrDefault(item.CreatedByUserId.Value, "?")
+            : "?";
+        return $"{name} - {item.Content}";
+    }
+
     private sealed record CalendarCell(DateTime Date, bool IsCurrentMonth, bool IsToday);
-    private sealed record CalendarItem(int Id, DateTime Date, CalendarType Type, string Content, long? CreatedByUserId);
+    private sealed record CalendarItem(int Id, DateTime Date, CalendarType Type, string Content, string? Body, long? CreatedByUserId);
 
     private enum CalendarType
     {
